@@ -19,7 +19,7 @@ class MatchComparator {
   }
 
  public:
-  explicit MatchComparator(Matcher::OrderingSpec orderingSpec) : orderingSpec_(std::move(orderingSpec)) {}
+  MatchComparator(Matcher::OrderingSpec orderingSpec) : orderingSpec_(std::move(orderingSpec)) {}
 
   bool operator()(const MatchPtr& a, const MatchPtr& b) const {
     for (const auto& ordering : orderingSpec_) {
