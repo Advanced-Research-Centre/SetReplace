@@ -19,7 +19,7 @@ mint getData(const mint* data, const mint& length, const mint& index) {
   }
 }
 
-namespace SetReplace {
+namespace  SetReplace {
 // These are global variables that keep all sets returned to Wolfram Language until they are destroyed.
 // Pointers are not returned directly for security reasons.
 using SetID = int64_t;
