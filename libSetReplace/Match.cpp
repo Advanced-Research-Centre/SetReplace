@@ -127,6 +127,7 @@ class Matcher::Implementation {
   const std::vector<Rule>& rules_;
   AtomsIndex& atomsIndex_;
   const std::function<AtomsVector(ExpressionID)> getAtomsVector_;
+  const std::function<EdgeSeparation(ExpressionID, ExpressionID)> getEdgeSeparation_;
 
   // Matches are arranged in buckets. Each bucket contains matches that are equivalent in terms of the ordering
   // function, however, buckets themselves are ordered according to that function.
@@ -154,11 +155,13 @@ class Matcher::Implementation {
   Implementation(const std::vector<Rule>& rules,
                  AtomsIndex* atomsIndex,
                  std::function<AtomsVector(ExpressionID)> getAtomsVector,
+                 std::function<EdgeSeparation(ExpressionID, ExpressionID)> getEdgeSeparation,
                  const OrderingSpec& orderingSpec,
                  const unsigned int randomSeed)
       : rules_(rules),
         atomsIndex_(*atomsIndex),
         getAtomsVector_(std::move(getAtomsVector)),
+        getEdgeSeparation_(std::move(getEdgeSeparation)),
         matchQueue_(MatchComparator(orderingSpec)),
         randomGenerator_(randomSeed) {}
 
@@ -273,7 +276,7 @@ class Matcher::Implementation {
     if (!Matcher::substituteMissingAtomsIfPossible({input}, {expressionAtoms}, &newInputs)) return;
 
     if (isMatchComplete(newMatch)) {
-      insertMatch(newMatch);
+      if (isMatchSpacelike(newMatch)) insertMatch(newMatch);
       return;
     }
 
@@ -311,6 +314,17 @@ class Matcher::Implementation {
     return std::find_if(match.inputExpressions.begin(), match.inputExpressions.end(), [](const auto& ex) -> bool {
              return ex < 0;
            }) == match.inputExpressions.end();
+  }
+
+  bool isMatchSpacelike(const Match& match) {
+    for (size_t i = 0; i < match.inputExpressions.size(); ++i) {
+      for (size_t j = i + 1; j < match.inputExpressions.size(); ++j) {
+        if (getEdgeSeparation_(match.inputExpressions[i], match.inputExpressions[j]) != EdgeSeparation::Spacelike) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   std::pair<size_t, std::vector<ExpressionID>> nextBestInputAndExpressionsToTry(
@@ -385,9 +399,11 @@ class Matcher::Implementation {
 Matcher::Matcher(const std::vector<Rule>& rules,
                  AtomsIndex* atomsIndex,
                  const std::function<AtomsVector(ExpressionID)>& getAtomsVector,
+                 const std::function<EdgeSeparation(ExpressionID, ExpressionID)>& getEdgeSeparation,
                  const OrderingSpec& orderingSpec,
                  const unsigned int randomSeed)
-    : implementation_(std::make_shared<Implementation>(rules, atomsIndex, getAtomsVector, orderingSpec, randomSeed)) {}
+    : implementation_(std::make_shared<Implementation>(
+          rules, atomsIndex, getAtomsVector, getEdgeSeparation, orderingSpec, randomSeed)) {}
 
 void Matcher::addMatchesInvolvingExpressions(const std::vector<ExpressionID>& expressionIDs,
                                              const std::function<bool()>& shouldAbort) {

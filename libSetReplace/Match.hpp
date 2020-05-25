@@ -52,12 +52,20 @@ class Matcher {
    */
   using OrderingSpec = std::vector<std::pair<OrderingFunction, OrderingDirection>>;
 
+  /** @brief Describes how edges are related to one another.
+   @details Timelike separation means one edge can be reached from another by following the causal dependency graph.
+   Spacelike means the common ancestor of the two edges is an event.
+   Branchlike means the common ancestor is an edge.
+   */
+  enum class EdgeSeparation { Timelike, Spacelike, Branchlike };
+
   /** @brief Creates a new matcher object.
    * @details This is an O(1) operation, does not do any matching yet.
    */
   Matcher(const std::vector<Rule>& rules,
           AtomsIndex* atomsIndex,
           const std::function<AtomsVector(ExpressionID)>& getAtomsVector,
+          const std::function<EdgeSeparation(ExpressionID, ExpressionID)>& getEdgeSeparation,
           const OrderingSpec& orderingSpec,
           unsigned int randomSeed = 0);
 

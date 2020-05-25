@@ -21,6 +21,7 @@ class Set::Implementation {
 
   std::unordered_map<ExpressionID, SetExpression> expressions_;
   std::vector<RuleID> eventRuleIDs_ = {-1};
+  std::vector<MatchPtr> events_;
 
   Atom nextAtom_ = 1;
   ExpressionID nextExpressionID_ = 0;
@@ -114,6 +115,8 @@ class Set::Implementation {
     assignDestroyerEvent(match->inputExpressions, eventID);
     eventRuleIDs_.push_back(match->rule);
 
+    events_.emplace_back(match);
+
     return 1;
   }
 
@@ -158,8 +161,15 @@ class Set::Implementation {
                  const unsigned int randomSeed,
                  const std::function<AtomsVector(ExpressionID)>& getAtomsVector)
       : rules_(std::move(rules)),
+        events_({std::make_shared<Match>(Match({-1, {}}))}),
         atomsIndex_(getAtomsVector),
-        matcher_(rules_, &atomsIndex_, getAtomsVector, orderingSpec, randomSeed) {
+        matcher_(
+            rules_,
+            &atomsIndex_,
+            getAtomsVector,
+            [this](const ExpressionID first, const ExpressionID second) { return edgeSeparation(first, second); },
+            orderingSpec,
+            randomSeed) {
     for (const auto& expression : initialExpressions) {
       for (const auto& atom : expression) {
         if (atom <= 0) throw Error::NonPositiveAtoms;
@@ -330,6 +340,72 @@ class Set::Implementation {
       smallestSoFar = std::min(smallestSoFar, largestForTheMatch);
     }
     return smallestSoFar;
+  }
+
+  Matcher::EdgeSeparation edgeSeparation(const ExpressionID first, const ExpressionID second) const {
+    std::unordered_set<ExpressionID> firstPastExpressions;
+    std::unordered_set<EventID> firstPastEvents;
+    addAllPastElementsFromExpression(first, &firstPastExpressions, &firstPastEvents);
+
+    std::unordered_set<Matcher::EdgeSeparation> ancestorTypes;
+    addAllAncestorTypesFromExpression(first, firstPastExpressions, firstPastEvents, second, &ancestorTypes);
+    
+    if (ancestorTypes.count(Matcher::EdgeSeparation::Timelike)) {
+      return Matcher::EdgeSeparation::Timelike;
+    } else if (ancestorTypes.count(Matcher::EdgeSeparation::Branchlike)) {
+      return Matcher::EdgeSeparation::Branchlike;
+    } else {
+      return Matcher::EdgeSeparation::Spacelike;
+    }
+  }
+
+  void addAllPastElementsFromExpression(const ExpressionID expression,
+                                        std::unordered_set<ExpressionID>* firstPastExpressions,
+                                        std::unordered_set<EventID>* firstPastEvents) const {
+    if (firstPastExpressions->count(expression)) return;
+    firstPastExpressions->insert(expression);
+    addAllPastElementsFromEvent(expressions_.at(expression).creatorEvent, firstPastExpressions, firstPastEvents);
+  }
+
+  void addAllPastElementsFromEvent(const EventID event,
+                                   std::unordered_set<ExpressionID>* firstPastExpressions,
+                                   std::unordered_set<EventID>* firstPastEvents) const {
+    if (firstPastEvents->count(event)) return;
+    firstPastEvents->insert(event);
+    for (const auto& input : events_[event]->inputExpressions) {
+      addAllPastElementsFromExpression(input, firstPastExpressions, firstPastEvents);
+    }
+  }
+
+  // Go down from second. If the first common ancestor hit is first, return Timelike.
+  // If it's an expression, return Branchlike. If it's an event, return Spacelike.
+  void addAllAncestorTypesFromExpression(const ExpressionID first,
+                                         const std::unordered_set<ExpressionID>& firstPastExpressions,
+                                         const std::unordered_set<EventID>& firstPastEvents,
+                                         const ExpressionID expression,
+                                         std::unordered_set<Matcher::EdgeSeparation>* ancestorTypes) const {
+    if (expression == first) {
+      ancestorTypes->insert(Matcher::EdgeSeparation::Timelike);
+    } else if (firstPastExpressions.count(expression)) {
+      ancestorTypes->insert(Matcher::EdgeSeparation::Branchlike);
+    } else {
+      addAllAncestorTypesFromEvent(
+          first, firstPastExpressions, firstPastEvents, expressions_.at(expression).creatorEvent, ancestorTypes);
+    }
+  }
+
+  void addAllAncestorTypesFromEvent(const ExpressionID first,
+                                    const std::unordered_set<ExpressionID>& firstPastExpressions,
+                                    const std::unordered_set<EventID>& firstPastEvents,
+                                    const EventID event,
+                                    std::unordered_set<Matcher::EdgeSeparation>* ancestorTypes) const {
+    if (firstPastEvents.count(event)) {
+      ancestorTypes->insert(Matcher::EdgeSeparation::Spacelike);
+    } else {
+      for (const auto& input : events_[event]->inputExpressions) {
+        addAllAncestorTypesFromExpression(first, firstPastExpressions, firstPastEvents, input, ancestorTypes);
+      }
+    }
   }
 };
 
