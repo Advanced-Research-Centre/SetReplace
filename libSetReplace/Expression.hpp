@@ -26,7 +26,7 @@ struct SetExpression {
 
   /** @brief Substitution event that has this expression as part of its input.
    */
-  EventID destroyerEvent = finalStateEvent;
+  std::vector<EventID> destroyerEvents = {};
 
   /** @brief Layer of the causal network this expression belongs to.
    */

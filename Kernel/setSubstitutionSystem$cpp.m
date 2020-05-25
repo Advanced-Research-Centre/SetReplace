@@ -121,14 +121,14 @@ encodeNestedLists[list_List] :=
 
 decodeExpressions[list_List] := Module[{
 		count = list[[1]],
-		creatorEvents, destroyerEvents, generations, atomPointers,
-		atomRanges, atomLists},
-	{creatorEvents, destroyerEvents, generations, atomPointers} =
+		creatorEvents, destroyerPointers, generations, atomPointers,
+		atomRanges, atomLists, destroyerRanges, destroyerLists},
+	{creatorEvents, destroyerPointers, generations, atomPointers} =
 		Transpose[Partition[list[[2 ;; 4 (count + 1) + 1]], 4]];
-	atomRanges = Partition[atomPointers, 2, 1];
-	atomLists = list[[#[[1]] ;; #[[2]] - 1]] & /@ atomRanges;
+	{atomRanges, destroyerRanges} = Partition[#, 2, 1] & /@ {atomPointers, destroyerPointers};
+	{atomLists, destroyerLists} = Map[list[[#[[1]] ;; #[[2]] - 1]] &, {atomRanges, destroyerRanges}, {2}];
 	<|$creatorEvents -> Most[creatorEvents],
-		$destroyerEvents -> Most[destroyerEvents] /. {-1 -> Infinity},
+		$destroyerEvents -> destroyerLists,
 		$generations -> Most[generations],
 		$atomLists -> atomLists|>
 ]

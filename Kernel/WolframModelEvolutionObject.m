@@ -363,7 +363,7 @@ propertyEvaluate[True, includeBoundaryEventsPattern][
 	Max @ data[$generations],
 	1 + Max @ data[$generations][[
 		Position[
-			data[$destroyerEvents], Except[Infinity], {1}, Heads -> False][[All, 1]]]]]
+			data[$destroyerEvents], Except[{}], {1}, Heads -> False][[All, 1]]]]]
 
 
 (* ::Subsection:: *)
@@ -485,7 +485,7 @@ propertyEvaluate[True, includeBoundaryEventsPattern][
 		positiveEvent = toPositiveStep[propertyEvaluate[True, None][obj, caller, "AllEventsCount"], s, caller, "Event"]},
 	Intersection[
 		Position[data[$creatorEvents], _ ? (# <= positiveEvent &)][[All, 1]],
-		Position[data[$destroyerEvents], _ ? (# > positiveEvent &)][[All, 1]]]
+		Position[Min /@ data[$destroyerEvents], _ ? (# > positiveEvent &)][[All, 1]]]
 ]
 
 
@@ -756,7 +756,7 @@ propertyEvaluate[True, includeBoundaryEvents : includeBoundaryEventsPattern][
 		KeyDrop[
 			Merge[Max] @ Join[
 				Association /@ Thread[data[$creatorEvents] -> data[$generations]],
-				Association /@ Thread[data[$destroyerEvents] -> data[$generations] + 1]],
+				Association /@ Catenate[Thread /@ Thread[data[$destroyerEvents] -> data[$generations] + 1]]],
 			{0, Infinity}]
 
 
@@ -785,8 +785,9 @@ propertyEvaluate[True, includeBoundaryEvents : includeBoundaryEventsPattern][
 		$eventsToDelete = Alternatives @@ eventsToDelete[includeBoundaryEvents],
 		allOptionValues = Flatten[Join[{o}, $propertyOptions[property]]]},
 	Graph[
-		DeleteCases[Union[data[$creatorEvents], data[$destroyerEvents]], $eventsToDelete],
-		Select[FreeQ[#, $eventsToDelete] &] @ Thread[data[$creatorEvents] \[DirectedEdge] data[$destroyerEvents]],
+		DeleteCases[Union[data[$creatorEvents], Catenate[data[$destroyerEvents]]], $eventsToDelete],
+		Select[FreeQ[#, $eventsToDelete] &] @
+			Catenate[Thread /@ Thread[data[$creatorEvents] \[DirectedEdge] data[$destroyerEvents]]],
 		VertexStyle -> Replace[
 			OptionValue[allOptionValues, VertexStyle],
 			Automatic -> Select[Head[#] =!= Rule || !MatchQ[#[[1]], $eventsToDelete] &] @ {
@@ -865,7 +866,10 @@ propertyEvaluate[True, boundary : includeBoundaryEventsPattern][
 		"AllEventsList"] := With[{
 	ruleIndices = propertyEvaluate[True, boundary][evolution, caller, "AllEventsRuleIndices"],
 	createdExpressions = PositionIndex[evolution["EdgeCreatorEventIndices"]],
-	destroyedExpressions = PositionIndex[evolution["EdgeDestroyerEventIndices"]]},
+	destroyedExpressions = Merge[
+			Association /@
+				Catenate[Thread /@ Thread[evolution["EdgeDestroyerEventIndices"] -> Range[evolution["AllEventsEdgesCount"]]]],
+			# &]},
 		If[MissingQ[ruleIndices],
 			ruleIndices,
 			MapThread[

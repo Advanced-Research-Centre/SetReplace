@@ -101,8 +101,7 @@ class Set::Implementation {
     // Name newly created atoms as well, now all atoms in the output are explicitly named.
     const auto namedRuleOutputs = nameAnonymousAtoms(explicitRuleOutputs);
 
-    matcher_.removeMatchesInvolvingExpressions(match->inputExpressions);
-    atomsIndex_.removeExpressions(match->inputExpressions);
+    matcher_.deleteMatch(match);
 
     Generation outputGeneration = 0;
     for (const auto& inputExpression : match->inputExpressions) {
@@ -295,18 +294,17 @@ class Set::Implementation {
     ids.reserve(expressions.size());
     for (const auto& expression : expressions) {
       ids.push_back(nextExpressionID_);
-      expressions_.insert(
-          std::make_pair(nextExpressionID_++, SetExpression{expression, creatorEvent, finalStateEvent, generation}));
+      expressions_.insert(std::make_pair(nextExpressionID_++, SetExpression{expression, creatorEvent, {}, generation}));
     }
     return ids;
   }
 
   void assignDestroyerEvent(const std::vector<ExpressionID>& expressions, const EventID destroyerEvent) {
     for (const auto id : expressions) {
-      if (expressions_.at(id).destroyerEvent == finalStateEvent) {
+      if (expressions_.at(id).destroyerEvents.empty()) {
         ++destroyedExpressionsCount_;
       }
-      expressions_.at(id).destroyerEvent = destroyerEvent;
+      expressions_.at(id).destroyerEvents.push_back(destroyerEvent);
     }
     updateAtomDegrees(&atomDegrees_, expressions, -1);
   }
