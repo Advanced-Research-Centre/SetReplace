@@ -11,6 +11,9 @@
 
 #include "Set.hpp"
 
+namespace SetReplace {
+namespace {
+
 mint getData(const mint* data, const mint& length, const mint& index) {
   if (index >= length || index < 0) {
     throw LIBRARY_FUNCTION_ERROR;
@@ -19,7 +22,6 @@ mint getData(const mint* data, const mint& length, const mint& index) {
   }
 }
 
-namespace SetReplace {
 // These are global variables that keep all sets returned to Wolfram Language until they are destroyed.
 // Pointers are not returned directly for security reasons.
 using SetID = int64_t;
@@ -324,6 +326,7 @@ int eventRuleIDs(WolframLibraryData libData, mint argc, MArgument* argv, MArgume
 
   return LIBRARY_NO_ERROR;
 }
+}  // namespace
 }  // namespace SetReplace
 
 EXTERN_C mint WolframLibrary_getVersion() { return WolframLibraryVersion; }

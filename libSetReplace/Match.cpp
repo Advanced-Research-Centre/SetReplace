@@ -16,6 +16,7 @@
 #include <vector>
 
 namespace SetReplace {
+namespace {
 class MatchComparator {
  private:
   const Matcher::OrderingSpec orderingSpec_;
@@ -128,6 +129,7 @@ class MatchEquality {
            mismatchedIterators.second == b->inputExpressions.end();
   }
 };
+}  // namespace
 
 class Matcher::Implementation {
  private:
