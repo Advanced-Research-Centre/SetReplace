@@ -1,5 +1,4 @@
-#ifndef LIBSETREPLACE_EXPRESSION_HPP_
-#define LIBSETREPLACE_EXPRESSION_HPP_
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -59,5 +58,3 @@ class AtomsIndex {
   std::shared_ptr<Implementation> implementation_;
 };
 }  // namespace SetReplace
-
-#endif  // LIBSETREPLACE_EXPRESSION_HPP_

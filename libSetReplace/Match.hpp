@@ -1,5 +1,4 @@
-#ifndef LIBSETREPLACE_MATCH_HPP_
-#define LIBSETREPLACE_MATCH_HPP_
+#pragma once
 
 #include <memory>
 #include <set>
@@ -105,5 +104,3 @@ class Matcher {
   std::shared_ptr<Implementation> implementation_;
 };
 }  // namespace SetReplace
-
-#endif  // LIBSETREPLACE_MATCH_HPP_

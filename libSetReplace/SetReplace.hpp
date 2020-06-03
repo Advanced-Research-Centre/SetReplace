@@ -1,7 +1,6 @@
 // Library definition for Wolfram LibraryLink
 
-#ifndef LIBSETREPLACE_SETREPLACE_HPP_
-#define LIBSETREPLACE_SETREPLACE_HPP_
+#pragma once
 
 #include "WolframLibrary.h"
 
@@ -42,5 +41,3 @@ EXTERN_C DLLEXPORT int terminationReason(WolframLibraryData libData, mint argc, 
 /** @brief Returns the list of indices of rules used for each event.
  */
 EXTERN_C DLLEXPORT int eventRuleIDs(WolframLibraryData libData, mint argc, MArgument* argv, MArgument result);
-
-#endif  // LIBSETREPLACE_SETREPLACE_HPP_

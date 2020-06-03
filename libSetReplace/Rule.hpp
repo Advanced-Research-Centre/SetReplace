@@ -1,5 +1,4 @@
-#ifndef LIBSETREPLACE_RULE_HPP_
-#define LIBSETREPLACE_RULE_HPP_
+#pragma once
 
 #include <vector>
 
@@ -13,5 +12,3 @@ struct Rule {
   const std::vector<AtomsVector> outputs;
 };
 }  // namespace SetReplace
-
-#endif  // LIBSETREPLACE_RULE_HPP_

@@ -1,5 +1,4 @@
-#ifndef LIBSETREPLACE_IDTYPES_HPP_
-#define LIBSETREPLACE_IDTYPES_HPP_
+#pragma once
 
 #include <cstdint>
 
@@ -32,5 +31,3 @@ constexpr EventID finalStateEvent = -1;
 using Generation = int64_t;
 constexpr Generation initialGeneration = 0;
 }  // namespace SetReplace
-
-#endif  // LIBSETREPLACE_IDTYPES_HPP_

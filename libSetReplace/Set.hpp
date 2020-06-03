@@ -1,5 +1,4 @@
-#ifndef LIBSETREPLACE_SET_HPP_
-#define LIBSETREPLACE_SET_HPP_
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -100,5 +99,3 @@ class Set {
   std::shared_ptr<Implementation> implementation_;
 };
 }  // namespace SetReplace
-
-#endif  // LIBSETREPLACE_SET_HPP_
