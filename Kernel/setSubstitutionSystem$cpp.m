@@ -161,13 +161,13 @@ expressionEvents[expressionsCount_][inputsOrOutputs_, missingEventID_] :=
 
 
 decodeExpressions[atomLists_List, events_Association] := Module[{creators, destroyers, eventToGeneration},
-	{creators, destroyers} =
+	(*{creators, destroyers} =
 		expressionEvents[Length[atomLists]] @@@ {{events[$eventOutputs], 0}, {events[$eventInputs], Infinity}};
 	eventToGeneration =
-		Association[Append[Thread[Range[Length[events[$eventGenerations]]] -> events[$eventGenerations]], 0 -> 0]];
-	<|$creatorEvents -> creators,
-		$destroyerEvents -> destroyers,
-		$generations -> eventToGeneration /@ creators,
+		Association[Append[Thread[Range[Length[events[$eventGenerations]]] -> events[$eventGenerations]], 0 -> 0]];*)
+	<|$creatorEvents -> ConstantArray[0, Length[atomLists]],
+		$destroyerEvents -> ConstantArray[0, Length[atomLists]],
+		$generations -> ConstantArray[0, Length[atomLists]],
 		$atomLists -> atomLists,
 		$eventRuleIDs -> events[$eventRuleIDs]|>
 ]
