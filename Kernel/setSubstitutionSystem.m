@@ -37,6 +37,8 @@ PackageScope["$ruleIndex"]
 PackageScope["$forward"]
 PackageScope["$backward"]
 
+PackageScope["$globalSpacelike"]
+
 
 (* ::Text:: *)
 (*Termination reason values*)
@@ -215,6 +217,29 @@ parseEventOrderingFunction[caller_, func_] := (
 )
 
 
+(* ::Subsection:: *)
+(*EventSelectionFunction is valid*)
+
+
+$eventSelectionFunctions = <|
+	"GlobalSpacelike" -> $globalSpacelike,
+	None -> None (* match-all local multiway *)
+|>;
+
+
+parseEventSelectionFunction[caller_, func_ /; MemberQ[Keys[$eventSelectionFunctions], func]] :=
+	$eventSelectionFunctions[func]
+
+
+General::invalidEventSelection = "EventSelectionFunction `1` should be one of `2`.";
+
+
+parseEventSelectionFunction[caller_, func_] := (
+	Message[caller::invalidEventSelection, func, Keys[$eventSelectionFunctions]];
+	$Failed
+)
+
+
 (* ::Section:: *)
 (*Implementation*)
 
@@ -259,17 +284,18 @@ simpleRuleQ[___] := False
 Options[setSubstitutionSystem] = {
 	Method -> Automatic,
 	TimeConstraint -> Infinity,
-	"EventOrderingFunction" -> Automatic};
+	"EventOrderingFunction" -> Automatic,
+	"EventSelectionFunction" -> "GlobalSpacelike"};
 
 
 (* ::Text:: *)
 (*Switching code between WL and C++ implementations*)
 
 
-General::symbOrdering = "Custom event ordering functions are not supported for symbolic method.";
+General::symbOrdering = "Custom event ordering and selection functions are not supported for symbolic method.";
 
 General::symbNotImplemented =
-	"Custom event ordering functions are only available for local rules, " <>
+	"Custom event ordering and selection functions are only available for local rules, " <>
 	"and only for sets of lists (hypergraphs).";
 
 
@@ -283,10 +309,12 @@ setSubstitutionSystem[
 		method = OptionValue[Method],
 		timeConstraint = OptionValue[TimeConstraint],
 		eventOrderingFunction = parseEventOrderingFunction[caller, OptionValue["EventOrderingFunction"]],
+		eventSelectionFunction = parseEventSelectionFunction[caller, OptionValue["EventSelectionFunction"]],
 		canonicalRules,
 		failedQ = False},
-	If[eventOrderingFunction === $Failed, Return[$Failed]];
-	If[OptionValue["EventOrderingFunction"] =!= Automatic && method === "Symbolic",
+	If[eventOrderingFunction === $Failed || eventSelectionFunction === $Failed, Return[$Failed]];
+	If[(OptionValue["EventOrderingFunction"] =!= Automatic ||
+			OptionValue["EventSelectionFunction"] =!= "GlobalSpacelike") && method === "Symbolic",
 		Message[caller::symbOrdering];
 		Return[$Failed]];
 	If[(timeConstraint > 0) =!= True, Return[$Failed]];
@@ -296,7 +324,8 @@ setSubstitutionSystem[
 			&& MatchQ[canonicalRules, {___ ? simpleRuleQ}],
 		If[$cppSetReplaceAvailable,
 			Return[
-				setSubstitutionSystem$cpp[rules, set, stepSpec, returnOnAbortQ, timeConstraint, eventOrderingFunction]]]];
+				setSubstitutionSystem$cpp[
+					rules, set, stepSpec, returnOnAbortQ, timeConstraint, eventOrderingFunction, eventSelectionFunction]]]];
 	If[MatchQ[method, $cppMethod],
 		failedQ = True;
 		If[!$cppSetReplaceAvailable,
