@@ -25,24 +25,26 @@ PackageScope["$newParameterlessProperties"]
 (*Keys in the data association.*)
 
 
-PackageScope["$creatorEvents"]
-PackageScope["$destroyerEvents"]
-PackageScope["$generations"]
-PackageScope["$atomLists"]
+PackageScope["$version"]
 PackageScope["$rules"]
 PackageScope["$maxCompleteGeneration"]
 PackageScope["$terminationReason"]
+PackageScope["$atomLists"]
 PackageScope["$eventRuleIDs"]
+PackageScope["$eventInputs"]
+PackageScope["$eventOutputs"]
+PackageScope["$eventGenerations"]
 
 
-$creatorEvents = "CreatorEvents";
-$destroyerEvents = "DestroyerEvents";
-$generations = "Generations";
-$atomLists = "AtomLists";
+$version = "Version";
 $rules = "Rules";
 $maxCompleteGeneration = "MaxCompleteGeneration";
 $terminationReason = "TerminationReason";
+$atomLists = "AtomLists";
 $eventRuleIDs = "EventRuleIDs";
+$eventInputs = "EventInputs";
+$eventOutputs = "EventOutputs";
+$eventGenerations = "EventGenerations";
 
 
 (* ::Section:: *)
@@ -948,14 +950,9 @@ WolframModelEvolutionObject::corrupt =
 
 
 evolutionDataQ[data_Association] :=
-	SubsetQ[
-		Keys[data],
-		{$creatorEvents, $destroyerEvents, $generations, $atomLists, $rules}] &&
-	SubsetQ[
-		{$creatorEvents, $destroyerEvents, $generations, $atomLists, $rules, $maxCompleteGeneration, $terminationReason,
-			$eventRuleIDs},
-		Keys[data]
-	]
+	Keys[data] === {
+		$version, $rules, $maxCompleteGeneration, $terminationReason, $atomLists, $eventRuleIDs, $eventInputs,
+		$eventOutputs, $eventGenerations}
 
 
 evolutionDataQ[___] := False
