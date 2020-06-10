@@ -204,6 +204,15 @@ $newParameterlessProperties = Intersection[$propertiesParameterless, Keys[$prope
 (*Master options handling*)
 
 
+General::missingMaxCompleteGeneration = "Cannot drop incomplete generations in an object with missing information.";
+
+
+propertyEvaluate[False, boundary_][evolution_, caller_, rest___] := If[MissingQ[evolution["CompleteGenerationsCount"]],
+	Message[caller::missingMaxCompleteGeneration],
+	propertyEvaluate[True, boundary][deleteIncompleteGenerations[evolution], caller, rest]
+]
+
+
 propertyEvaluate[False, boundary_][evolution_, caller_, rest___] :=
 	propertyEvaluate[True, boundary][deleteIncompleteGenerations[evolution], caller, rest]
 
