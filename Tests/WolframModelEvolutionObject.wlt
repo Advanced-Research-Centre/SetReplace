@@ -1140,18 +1140,6 @@
       ] & @@@ {{None, {}}, {"Final", {Infinity -> _}}, {All, {0 -> _, Infinity -> _}}},
 
       VerificationTest[
-        graphicsQ @ GraphPlot[WolframModel[{{1, 2}} -> {{1, 3}, {3, 2}}, {{1, 1}}, 4][#, Background -> Automatic]]
-      ] & /@ {"CausalGraph", "LayeredCausalGraph"},
-
-      VerificationTest[
-        Options[
-          checkGraphics @ GraphPlot[
-            WolframModel[{{1, 2}} -> {{1, 3}, {3, 2}}, {{1, 1}}, 4][#, Background -> RGBColor[0.2, 0.5, 0.3]]],
-          Background],
-        {Background -> RGBColor[0.2, 0.5, 0.3]}
-      ] & /@ {"CausalGraph", "LayeredCausalGraph"},
-
-      VerificationTest[
         Options[
           WolframModel[{{1, 2}} -> {{1, 3}, {3, 2}}, {{1, 1}}, 4][#, EdgeStyle -> Automatic, VertexStyle -> Automatic],
           {EdgeStyle, VertexStyle}],
@@ -1438,7 +1426,21 @@
       VerificationTest[
         graphicsQ /@ WolframModel[{} -> {{1, 2}}, {}, <|"MaxEvents" -> 1|>, "EventsStatesPlotsList"],
         {True, True}
-      ]
+      ],
+
+      (* CausalGraph *)
+
+      VerificationTest[
+        graphicsQ @ GraphPlot[WolframModel[{{1, 2}} -> {{1, 3}, {3, 2}}, {{1, 1}}, 4][#, Background -> Automatic]]
+      ] & /@ {"CausalGraph", "LayeredCausalGraph"},
+
+      VerificationTest[
+        Options[
+          checkGraphics @ GraphPlot[
+            WolframModel[{{1, 2}} -> {{1, 3}, {3, 2}}, {{1, 1}}, 4][#, Background -> RGBColor[0.2, 0.5, 0.3]]],
+          Background],
+        {Background -> RGBColor[0.2, 0.5, 0.3]}
+      ] & /@ {"CausalGraph", "LayeredCausalGraph"}
     },
     "options" -> {
       "Parallel" -> False

@@ -241,7 +241,7 @@ WolframModel[
 			modifiedEvolution,
 			WolframModel,
 			#] &;
-		result = Check[
+		result = Catch[Check[
 			If[modifiedEvolution =!= $Failed,
 				If[ListQ[property],
 						Catch[
@@ -252,7 +252,7 @@ WolframModel[
 					HoldPattern[WolframModelEvolutionObject[data_Association]] :>
 						WolframModelEvolutionObject[Join[data, <|$rules -> rulesSpec|>]],
 				$Failed],
-			$Failed];
+			$Failed]];
 		result /; result =!= $Failed
 	]
 

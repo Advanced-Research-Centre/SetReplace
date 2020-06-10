@@ -34,6 +34,9 @@ PackageScope["$eventRuleIDs"]
 PackageScope["$eventInputs"]
 PackageScope["$eventOutputs"]
 PackageScope["$eventGenerations"]
+PackageScope["$creatorEvents"]
+PackageScope["$destroyerEvents"]
+PackageScope["$generations"]
 
 
 $version = "Version";
@@ -45,6 +48,11 @@ $eventRuleIDs = "EventRuleIDs";
 $eventInputs = "EventInputs";
 $eventOutputs = "EventOutputs";
 $eventGenerations = "EventGenerations";
+
+(* Old keys *)
+$creatorEvents = "CreatorEvents";
+$destroyerEvents = "DestroyerEvents";
+$generations = "Generations";
 
 
 (* ::Section:: *)
@@ -540,12 +548,14 @@ propertyEvaluate[True, boundary : includeBoundaryEventsPattern][
 		caller_,
 		property : "FinalStatePlot",
 		o : OptionsPattern[] /; (Complement[{o}, FilterRules[{o}, Options[WolframModelPlot]]] == {})] :=
-	Quiet[
-		Check[
-			WolframModelPlot[propertyEvaluate[True, boundary][obj, caller, "FinalState"], o],
-			Message[caller::nonHypergraphPlot, property],
+	Check[
+		Quiet[
+			Check[
+				WolframModelPlot[propertyEvaluate[True, boundary][obj, caller, "FinalState"], o],
+				Message[caller::nonHypergraphPlot, property],
+				WolframModelPlot::invalidEdges],
 			WolframModelPlot::invalidEdges],
-		WolframModelPlot::invalidEdges]
+		Throw[$Failed]]
 
 
 (* ::Subsection:: *)
@@ -620,16 +630,18 @@ propertyEvaluate[True, boundary : includeBoundaryEventsPattern][
 		caller_,
 		property : "StatesPlotsList",
 		o : OptionsPattern[] /; (Complement[{o}, FilterRules[{o}, Options[WolframModelPlot]]] == {})] :=
-	Quiet[
-		Map[
-			Check[
+	Check[
+		Quiet[
+			Map[
 				Check[
-					WolframModelPlot[#, o],
-					Message[caller::nonHypergraphPlot, property],
-					WolframModelPlot::invalidEdges],
-				Throw[$Failed]] &,
-			propertyEvaluate[True, boundary][obj, caller, "StatesList"]],
-		WolframModelPlot::invalidEdges]
+					Check[
+						WolframModelPlot[#, o],
+						Message[caller::nonHypergraphPlot, property],
+						WolframModelPlot::invalidEdges],
+					Throw[$Failed]] &,
+				propertyEvaluate[True, boundary][obj, caller, "StatesList"]],
+			WolframModelPlot::invalidEdges],
+		Throw[$Failed]]
 
 
 (* ::Subsection:: *)
@@ -659,27 +671,29 @@ propertyEvaluate[True, boundary : includeBoundaryEventsPattern][
 		{Complement[##], Complement[#2, #1], Intersection[##]} &,
 		{Append[events[[All, 1]], {}], Prepend[events[[All, 2]], {}]}]];
 	allEdges = propertyEvaluate[True, None][obj, caller, "AllEventsEdgesList"];
-	Quiet[
-		MapThread[
-			Check[
+	Check[
+		Quiet[
+			MapThread[
 				Check[
-					WolframModelPlot[
-						allEdges[[#]],
-						o,
-						EdgeStyle -> ReplacePart[
-							Table[Automatic, Length[#]],
-							Join[
-								Thread[Position[#, Alternatives @@ #2][[All, 1]] -> style[$lightTheme][$destroyedEdgeStyle]],
-								Thread[Position[#, Alternatives @@ #3][[All, 1]] -> style[$lightTheme][$createdEdgeStyle]],
-								Thread[Position[#, Alternatives @@ #4][[All, 1]] ->
-									style[$lightTheme][$destroyedAndCreatedEdgeStyle]]]]],
-					Message[caller::nonHypergraphPlot, property],
-					WolframModelPlot::invalidEdges],
-				Throw[$Failed]] &,
-			If[MatchQ[boundary, "Initial" | All], Rest /@ # &, # &] @
-				If[MatchQ[boundary, All | "Final"], Most /@ # &, # &] @
-				{stateIndices, destroyedOnlyIndices, createdOnlyIndices, destroyedAndCreatedIndices}],
-		WolframModelPlot::invalidEdges]
+					Check[
+						WolframModelPlot[
+							allEdges[[#]],
+							o,
+							EdgeStyle -> ReplacePart[
+								Table[Automatic, Length[#]],
+								Join[
+									Thread[Position[#, Alternatives @@ #2][[All, 1]] -> style[$lightTheme][$destroyedEdgeStyle]],
+									Thread[Position[#, Alternatives @@ #3][[All, 1]] -> style[$lightTheme][$createdEdgeStyle]],
+									Thread[Position[#, Alternatives @@ #4][[All, 1]] ->
+										style[$lightTheme][$destroyedAndCreatedEdgeStyle]]]]],
+						Message[caller::nonHypergraphPlot, property],
+						WolframModelPlot::invalidEdges],
+					Throw[$Failed]] &,
+				If[MatchQ[boundary, "Initial" | All], Rest /@ # &, # &] @
+					If[MatchQ[boundary, All | "Final"], Most /@ # &, # &] @
+					{stateIndices, destroyedOnlyIndices, createdOnlyIndices, destroyedAndCreatedIndices}],
+			WolframModelPlot::invalidEdges],
+		Throw[$Failed]]
 ]
 
 
@@ -1011,12 +1025,19 @@ WolframModelEvolutionObject[data_][opts : OptionsPattern[]] := 0 /;
 (*Association has correct fields*)
 
 
-WolframModelEvolutionObject::corrupt =
-	"WolframModelEvolutionObject does not have a correct format. " <>
-	"Use WolframModel for construction.";
+$currentVersion = 2;
 
 
-evolutionDataQ[data_Association] :=
+evolutionDataQ[data_Association] := evolutionDataQ[Lookup[data, $version, 1], data]
+
+
+evolutionDataQ[1, data_Association] :=
+	Sort[Keys[data]] === Sort[{
+		$creatorEvents, $destroyerEvents, $generations, $atomLists, $rules, $maxCompleteGeneration, $terminationReason,
+		$eventRuleIDs}]
+
+
+evolutionDataQ[2, data_Association] :=
 	Keys[data] === {
 		$version, $rules, $maxCompleteGeneration, $terminationReason, $atomLists, $eventRuleIDs, $eventInputs,
 		$eventOutputs, $eventGenerations}
@@ -1025,6 +1046,45 @@ evolutionDataQ[data_Association] :=
 evolutionDataQ[___] := False
 
 
-WolframModelEvolutionObject[data_] := 0 /;
-	!evolutionDataQ[data] &&
+migrateEvolutionObjectData[data_, 1, 2] := Module[{eventsToInputs, eventsToOutputs, eventInputs, eventOutputs},
+	(* Event inputs could be in incorrect order due to insufficient data in version 1 (see #372). *)
+	(* Once Method -> "Symbolic" no longer uses version 1, a message should be generated here about that. *)
+	{eventsToInputs, eventsToOutputs} =
+		GroupBy[Thread[data[#] -> Range[Length[data[#]]]], First][[All, All, 2]] & /@ {$destroyerEvents, $creatorEvents};
+	{eventInputs, eventOutputs} = Function[{eventsToExpressions},
+		Lookup[eventsToExpressions, #, {}] & /@ Range[0, Length[data[$eventRuleIDs]]]] /@ {eventsToInputs, eventsToOutputs};
+	<|$version -> 2,
+		$rules -> data[$rules],
+		$maxCompleteGeneration -> data[$maxCompleteGeneration],
+		$terminationReason -> data[$terminationReason],
+		$atomLists -> data[$atomLists],
+		$eventRuleIDs -> Join[{0}, data[$eventRuleIDs]],
+		$eventInputs -> eventInputs,
+		$eventOutputs -> eventOutputs,
+		$eventGenerations -> (Max[Append[#, -1]] + 1 &) /@ Map[data[$generations][[#]] &, eventInputs, {2}]|>
+]
+
+
+WolframModelEvolutionObject[data_] /;
+		Lookup[data, $version, 1] < $currentVersion && evolutionDataQ[data] :=
+	WolframModelEvolutionObject[migrateEvolutionObjectData[data, Lookup[data, $version, 1], 2]]
+
+
+WolframModelEvolutionObject::future =
+	"WolframModelEvolutionObject is produced by a later version of SetReplace. " <>
+	"Evaluate PacletInstall[\"SetReplace\"], or check " <>
+	"https://github.com/maxitg/SetReplace/blob/master/README.md#getting-started to install manually.";
+
+
+WolframModelEvolutionObject[data_] /; data[$version] > $currentVersion := 0 /;
+	Message[WolframModelEvolutionObject::future]
+
+
+WolframModelEvolutionObject::corrupt =
+	"WolframModelEvolutionObject does not have a correct format. " <>
+	"Use WolframModel for construction.";
+
+
+WolframModelEvolutionObject[data_] /;
+		Lookup[data, $version, 1] <= $currentVersion && !evolutionDataQ[data] := 0 /;
 	Message[WolframModelEvolutionObject::corrupt]

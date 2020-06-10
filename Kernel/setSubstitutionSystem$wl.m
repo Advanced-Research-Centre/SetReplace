@@ -317,6 +317,14 @@ vertexCount[$vertexIndex[index_]] := Length[index]
 vertexCount[$noIndex] := 0
 
 
+totalGenerationsCount[expressionGenerations_, expressionDestroyerEvents_] :=
+	Max[
+		0,
+		Max @ expressionGenerations,
+		1 + Max @ expressionGenerations[[
+			Position[expressionDestroyerEvents, Except[Infinity], {1}, Heads -> False][[All, 1]]]]]
+
+
 (* ::Text:: *)
 (*This function runs a modified version of the set replace system that also keeps track of metadata such as generations and events. It uses setReplace$wl to evaluate that modified system.*)
 
@@ -325,7 +333,7 @@ setSubstitutionSystem$wl[
 			caller_, rules_, set_, stepSpec_, returnOnAbortQ_, timeConstraint_] := Module[{
 		setWithMetadata, renamedRules, rulesWithMetadata, outputWithMetadata, result,
 		nextExpressionID = 1, nextEventID = 1, expressionsCountsPerVertex, vertexIndex, nextExpression,
-		intermediateEvolution},
+		generationsCount, maxCompleteGenerationAssumingExceedingStepSpecGenerationsDontExist},
 	nextExpression = nextExpressionID++ &;
 	(* {id, creator, destroyer, generation, atoms} *)
 	setWithMetadata = {nextExpression[], 0, \[Infinity], 0, #} & /@ set;
@@ -358,32 +366,28 @@ setSubstitutionSystem$wl[
 			outputWithMetadata[[1, 1]],
 			If[outputWithMetadata[[2, 1]] == {}, {}, outputWithMetadata[[2, 1, 1]]]],
 		First];
-	intermediateEvolution = WolframModelEvolutionObject[<|
+	generationsCount = totalGenerationsCount[result[[All, 4]], result[[All, 3]]];
+	maxCompleteGenerationAssumingExceedingStepSpecGenerationsDontExist = CheckAbort[
+		maxCompleteGeneration[outputWithMetadata[[1, 1]], renamedRules],
+		If[returnOnAbortQ,
+			Missing["Unknown", $Aborted],
+			Return[$Aborted]
+		]];
+
+	WolframModelEvolutionObject[<|
 		$creatorEvents -> result[[All, 2]],
 		$destroyerEvents -> result[[All, 3]],
 		$generations -> result[[All, 4]],
 		$atomLists -> result[[All, 5]],
 		$rules -> rules,
-		$maxCompleteGeneration -> CheckAbort[
-			maxCompleteGeneration[outputWithMetadata[[1, 1]], renamedRules],
-			If[returnOnAbortQ,
-				Missing["Unknown", $Aborted],
-				Return[$Aborted]
-			]],
-		$terminationReason -> outputWithMetadata[[1, 2]],
-		$eventRuleIDs -> If[outputWithMetadata[[2, 2]] == {}, {}, outputWithMetadata[[2, 2, 1]]]|>];
-	WolframModelEvolutionObject[
-		Join[
-			intermediateEvolution[[1]],
-			<|$maxCompleteGeneration -> With[{
-					possibleInfinityResult = intermediateEvolution[[1, Key[$maxCompleteGeneration]]]},
-				If[MissingQ[possibleInfinityResult],
-					possibleInfinityResult,
-					Min[possibleInfinityResult, intermediateEvolution["TotalGenerationsCount"]]]],
-			$terminationReason -> Replace[
-				intermediateEvolution[[1, Key[$terminationReason]]],
-				$fixedPoint ->
-					If[intermediateEvolution["TotalGenerationsCount"] == Lookup[stepSpec, $maxGenerationsLocal, Infinity],
-						$maxGenerationsLocal,
-						$fixedPoint]]|>]]
+		$maxCompleteGeneration -> If[MissingQ[maxCompleteGenerationAssumingExceedingStepSpecGenerationsDontExist],
+			maxCompleteGenerationAssumingExceedingStepSpecGenerationsDontExist,
+			Min[maxCompleteGenerationAssumingExceedingStepSpecGenerationsDontExist, generationsCount]],
+		$terminationReason -> Replace[
+			outputWithMetadata[[1, 2]],
+			$fixedPoint ->
+				If[generationsCount == Lookup[stepSpec, $maxGenerationsLocal, Infinity],
+					$maxGenerationsLocal,
+					$fixedPoint]],
+		$eventRuleIDs -> If[outputWithMetadata[[2, 2]] == {}, {}, outputWithMetadata[[2, 2, 1]]]|>]
 ]
