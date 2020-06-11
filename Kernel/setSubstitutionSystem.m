@@ -333,7 +333,8 @@ setSubstitutionSystem[
 			makeMessage[caller, "lowLevelNotImplemented"]]];
 	If[failedQ || !MatchQ[OptionValue[Method], Alternatives @@ $SetReplaceMethods],
 		$Failed,
-		If[OptionValue["EventOrderingFunction"] =!= Automatic,
+		If[OptionValue["EventOrderingFunction"] =!= Automatic ||
+				OptionValue["EventSelectionFunction"] =!= "GlobalSpacelike",
 			Message[caller::symbNotImplemented];
 			Return[$Failed]];
 		setSubstitutionSystem$wl[caller, rules, set, stepSpec, returnOnAbortQ, timeConstraint]]
