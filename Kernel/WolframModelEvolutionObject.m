@@ -498,14 +498,15 @@ toPositiveStep[total_, requested : Except[_Integer], caller_, name_] := (
 (*StateEdgeIndicesAfterEvents*)
 
 
-stateEdgeIndicesAfterEvents[WolframModelEvolutionObject[data_], caller_, events_] := Module[{edgeCounts},
-	edgeCounts = Merge[
-		{Counts[Catenate[data[$eventOutputs][[events + 1]]]],
-			-Counts[Catenate[data[$eventInputs][[events + 1]]]]},
-		Total];
-	If[Min[edgeCounts] < 0,
-		makeMessage[caller, "multiwayState", First[Keys[Select[edgeCounts, # < 0 &]]]]; Throw[$Failed],
-		Keys[Select[edgeCounts, # > 0 &]]]
+stateEdgeIndicesAfterEvents[WolframModelEvolutionObject[data_], caller_, events_] := Module[{createdExpressions, destroyedExpressions, edgeCounts},
+	createdExpressions = Catenate[data[$eventOutputs][[events + 1]]];
+	destroyedExpressions = Catenate[data[$eventInputs][[events + 1]]];
+	If[DuplicateFreeQ[destroyedExpressions],
+		Sort[Complement[createdExpressions, destroyedExpressions]],
+	(* else *)
+		makeMessage[caller, "multiwayState", Last[Keys[Sort[Counts[destroyedExpressions]]]]];
+		Throw[$Failed]
+	]
 ]
 
 
