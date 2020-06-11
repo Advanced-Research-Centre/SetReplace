@@ -87,6 +87,10 @@ messageTemplate["stepNotInteger"] =
 	"`2` `3` must be an integer.";
 
 
+messageTemplate["multiwayFinalStepLimit"] =
+	"The limit for the `2` is not supported for multiway systems.";
+
+
 messageTemplate["nonopt"] =
 	"Options expected (instead of `3`) " <>
 	"beyond position 1 for `2` property. " <>

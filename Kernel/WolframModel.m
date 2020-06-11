@@ -103,11 +103,11 @@ fromInitSpec[rulesSpec_Association, Automatic] := (
 (*Steps*)
 
 
-fromStepsSpec[init_, generations : (_Integer | Infinity), timeConstraint_] :=
-	fromStepsSpec[init, <|$stepSpecKeys[$maxGenerationsLocal] -> generations|>, timeConstraint]
+fromStepsSpec[init_, generations : (_Integer | Infinity), timeConstraint_, eventSelectionFunction_] :=
+	fromStepsSpec[init, <|$stepSpecKeys[$maxGenerationsLocal] -> generations|>, timeConstraint, eventSelectionFunction]
 
 
-fromStepsSpec[_, spec_Association, _] := With[{
+fromStepsSpec[_, spec_Association, _, _] := With[{
 		stepSpecInverse = Association[Reverse /@ Normal[$stepSpecKeys]]}, {
 			KeyMap[# /. stepSpecInverse &, spec],
 			Inherited (* termination reason *),
@@ -116,16 +116,19 @@ fromStepsSpec[_, spec_Association, _] := With[{
 ]
 
 
-fromStepsSpec[init_, Automatic, timeConstraint_] := fromStepsSpec[init, {Automatic, 1}, timeConstraint]
+fromStepsSpec[init_, Automatic, timeConstraint_, eventSelectionFunction_] :=
+	fromStepsSpec[init, {Automatic, 1}, timeConstraint, eventSelectionFunction]
 
 
 $automaticMaxEvents = 5000;
 $automaticMaxFinalExpressions = 200;
 $automaticStepsTimeConstraint = 5.0;
 
-fromStepsSpec[init_, {Automatic, factor_}, timeConstraint_] := {
+fromStepsSpec[init_, {Automatic, factor_}, timeConstraint_, eventSelectionFunction_] := {
 	<|$maxEvents -> Round[factor $automaticMaxEvents],
-		$maxFinalExpressions -> Max[Round[factor $automaticMaxFinalExpressions], Length[init]]|>,
+		$maxFinalExpressions -> If[multiwayEventSelectionFunctionQ[eventSelectionFunction],
+			Infinity,
+			Max[Round[factor $automaticMaxFinalExpressions], Length[init]]]|>,
 	Automatic, (* termination reason *)
 	{TimeConstraint -> Min[timeConstraint, Replace[factor, 0 | 0. -> 1] $automaticStepsTimeConstraint],
 		"IncludePartialGenerations" -> False},
@@ -207,7 +210,7 @@ WolframModel[
 		patternRules = fromRulesSpec[rulesSpec];
 		initialSet = Catch[fromInitSpec[rulesSpec, initSpec]];
 		{steps, terminationReasonOverride, optionsOverride, abortBehavior} =
-			fromStepsSpec[initialSet, stepsSpec, OptionValue[TimeConstraint]];
+			fromStepsSpec[initialSet, stepsSpec, OptionValue[TimeConstraint], OptionValue["EventSelectionFunction"]];
 		overridenOptionValue = OptionValue[WolframModel, Join[optionsOverride, {o}], #] &;
 		evolution = If[initialSet =!= $Failed,
 			Check[

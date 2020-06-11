@@ -18,6 +18,7 @@ PackageExport["$SetReplaceMethods"]
 
 PackageScope["setReplaceRulesQ"]
 PackageScope["stepCountQ"]
+PackageScope["multiwayEventSelectionFunctionQ"]
 PackageScope["setSubstitutionSystem"]
 
 
@@ -122,7 +123,13 @@ $stepSpecNamesInErrorMessage = <|
 stepCountQ[n_] := IntegerQ[n] && n >= 0 || n == \[Infinity]
 
 
-stepSpecQ[caller_, set_, spec_] :=
+multiwayEventSelectionFunctionQ[None] = True
+
+
+multiwayEventSelectionFunctionQ[_] = False
+
+
+stepSpecQ[caller_, set_, spec_, eventSelectionFunction_] :=
 	(* Check everything is a non-negative integer. *)
 	And @@ KeyValueMap[
 			If[stepCountQ[#2],
@@ -141,8 +148,14 @@ stepSpecQ[caller_, set_, spec_] :=
 				makeMessage[caller, "tooSmallStepLimit", $stepSpecNamesInErrorMessage[#1], spec[#1], #2]; False] & @@@ {
 		{$maxFinalVertices, If[MissingQ[spec[$maxFinalVertices]], 0, Length[Union[Catenate[set]]]]},
 		{$maxFinalVertexDegree, If[MissingQ[spec[$maxFinalVertexDegree]], 0, Max[Counts[Catenate[Union /@ set]]]]},
-		{$maxFinalExpressions, Length[set]}})
-
+		{$maxFinalExpressions, Length[set]}}) &&
+	(* Check final step constraints are not requested for a multiway system *)
+	(!multiwayEventSelectionFunctionQ[eventSelectionFunction] ||
+		AllTrue[
+			{$maxFinalVertices, $maxFinalExpressions, $maxFinalVertexDegree},
+			If[spec[#] === Infinity || MissingQ[spec[#]],
+				True,
+				makeMessage[caller, "multiwayFinalStepLimit", $stepSpecNamesInErrorMessage[#]]; False] &])
 
 (* ::Subsection:: *)
 (*Method is valid*)
@@ -305,7 +318,7 @@ setSubstitutionSystem[
 			stepSpec_,
 			caller_,
 			returnOnAbortQ_,
-			o : OptionsPattern[]] /; stepSpecQ[caller, set, stepSpec] := Module[{
+			o : OptionsPattern[]] /; stepSpecQ[caller, set, stepSpec, OptionValue[setSubstitutionSystem, {o}, "EventSelectionFunction"]] := Module[{
 		method = OptionValue[Method],
 		timeConstraint = OptionValue[TimeConstraint],
 		eventOrderingFunction = parseEventOrderingFunction[caller, OptionValue["EventOrderingFunction"]],
