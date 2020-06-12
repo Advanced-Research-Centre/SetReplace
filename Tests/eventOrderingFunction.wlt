@@ -1,9 +1,5 @@
 <|
   "eventOrderingFunction" -> <|
-    "init" -> (
-      Attributes[Global`testUnevaluated] = {HoldAll};
-      Global`testUnevaluated[args___] := SetReplace`PackageScope`testUnevaluated[VerificationTest, args];
-    ),
     "tests" -> {
       VerificationTest[
         SetReplace[{{1}, {2}, {3}, {4}, {5}}, {{{2}, {3}, {4}} -> {{X}}, {{3}} -> {{X}}}],
