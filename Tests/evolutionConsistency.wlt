@@ -1,17 +1,12 @@
 <|
-  "causalGraph" -> <|
-    "init" -> (
-      Attributes[Global`testUnevaluated] = {HoldAll};
-      Global`testUnevaluated[args___] := SetReplace`PackageScope`testUnevaluated[VerificationTest, args];
+  "evolutionConsistency" -> <|
+    "tests" -> (
+      $singleSystemTimeConstraint = 0.1;
 
       consistentQ = Function[{evolution},
         AcyclicGraphQ[evolution["CausalGraph"]] &&
         LoopFreeGraphQ[evolution["CausalGraph"]] &&
         VertexCount[evolution["CausalGraph"]] === evolution["EventsCount"]];
-
-      $eventSelectionFunctions = {"GlobalSpacelike", None};
-      methods["GlobalSpacelike"] = {"LowLevel", "Symbolic"};
-      methods[None] = {"LowLevel"};
 
       (* rule, init, global-spacelike low-level events, global-spacelike symbolic events, match-all events *)
       $systems = {
@@ -48,40 +43,86 @@
         {{{{1, 2}, {1, 3}, {1, 4}} -> {{2, 3}, {3, 4}, {4, 5}, {5, 2}, {5, 4}}}, {{1, 1}, {1, 1}, {1, 1}}},
         {<|"PatternRules" -> {a_, b_} :> a + b|>, {1, 2, 5, 3, 6}}
       };
-    ),
-    "tests" -> {
-      Function[{verificationFunction, rule, init, stepsSpec, method, eventSelectionFunction}, {
-        VerificationTest[
-          verificationFunction[WolframModel[rule,
-                                            init,
-                                            stepsSpec,
-                                            "EventSelectionFunction" -> eventSelectionFunction,
-                                            Method -> method]]
-        ],
 
-        Function[{seed},
-          VerificationTest[
-            SeedRandom[seed];
-            verificationFunction[WolframModel[rule,
-                                              init,
-                                              stepsSpec,
-                                              "EventSelectionFunction" -> eventSelectionFunction,
-                                              "EventOrderingFunction" -> "Random"]]
+      $features = <|
+        "VertexNamingFunction" -> {Automatic, None, All},
+        "IncludePartialGenerations" -> {True, False},
+        "EventSelectionFunction" -> {"GlobalSpacelike", None},
+        "EventOrderingFunction" -> {Automatic, "NewestEdge", "OldestEdge", "Random",
+                                    {"NewestEdge", "RuleIndex"},
+                                    {"NewestEdge", "RuleOrdering", "RuleIndex"}},
+        "Seed" -> Range[1534, 1536],
+        "StepLimiter" -> {"MaxEvents", "MaxGenerations", "MaxEdges", "MaxVertices", "MaxVertexDegree"},
+        "Method" -> {Automatic, "Symbolic"},
+        "TimeConstraint" -> {Infinity, $singleSystemTimeConstraint / 2}
+      |>;
+
+      $featureCombinations = {{"VertexNamingFunction", "EventSelectionFunction"},
+                              {"IncludePartialGenerations", "EventSelectionFunction"},
+                              {"EventOrderingFunction", "EventSelectionFunction"},
+                              {"Seed", "EventOrderingFunction"},
+                              {"StepLimiter", "EventSelectionFunction"},
+                              {"StepLimiter", "Method"},
+                              {"Method", "TimeConstraint"}};
+
+      $featureValueCombinations = Catenate[Function[{featuresToTest}, Module[{
+          defaultValueFeatures, enumeratedValueFeatures, featureValueLists},
+        defaultValueFeatures = #[[{1}]] & /@ $features;
+        enumeratedValueFeatures = Association[Thread[featuresToTest -> $features /@ featuresToTest]];
+        featureValueLists = Join[defaultValueFeatures, enumeratedValueFeatures];
+        Association[Thread[Keys[featureValueLists] -> #]] & /@ Tuples[Values[featureValueLists]]
+      ]] /@ $featureCombinations];
+
+      $systemsWithOptions =
+        Join[<|"Rule" -> #[[1, 1]], "Init" -> #[[1, 2]]|>, #[[2]]] & /@ Tuples[{$systems, $featureValueCombinations}];
+
+      nothingIfSmaller[value_, min_] := If[value < min, Nothing, value];
+
+      $systemsWithSteps = ParallelMap[Module[{timedEvolution, stepLimitValue, stepLimit},
+        If[#EventSelectionFunction =!= "GlobalSpacelike" && !MatchQ[#StepLimiter, "MaxEvents" | "MaxGenerations"] ||
+           #Method === Automatic && (AssociationQ[#Rule] ||
+             !AllTrue[Replace[#Rule, {r_Rule :> {r}}], SetReplace`PackageScope`connectedHypergraphQ[#[[1]]] &]) ||
+           #StepLimiter === "MaxVertexDegree" && AssociationQ[#Rule],
+          Nothing,
+        (* else, the system can be evaluated *)
+          SeedRandom[#Seed];
+          timedEvolution = WolframModel[#Rule,
+                                        #Init,
+                                        Infinity,
+                                        "VertexNamingFunction" -> #VertexNamingFunction,
+                                        "IncludePartialGenerations" -> #IncludePartialGenerations,
+                                        "EventSelectionFunction" -> #EventSelectionFunction,
+                                        Method -> #Method,
+                                        TimeConstraint -> $singleSystemTimeConstraint];
+          stepLimitValue = Switch[#StepLimiter,
+            "MaxEvents", timedEvolution["AllEventsCount"],
+            "MaxGenerations", nothingIfSmaller[timedEvolution["CompleteGenerationsCount"] - 1, 0],
+            "MaxEdges", nothingIfSmaller[timedEvolution["FinalEdgeCount"] - 1, Length[#Init]],
+            "MaxVertices", nothingIfSmaller[
+              timedEvolution["FinalDistinctElementsCount"] - 1, CountDistinct[Cases[#Init, _ ? AtomQ, All]]],
+            "MaxVertexDegree", nothingIfSmaller @@ (
+              Max[Counts[Catenate[Union /@ #]]] + #2 & @@@ {{timedEvolution["FinalState"], -1}, {#Init, 0}})
+          ];
+          If[stepLimitValue === Nothing,
+            Nothing,
+          (* else, we got a new system to run *)
+            Join[#, <|"StepLimit" -> <|#StepLimiter -> stepLimitValue|>|>]
           ]
-        ] /@ Range[1534, 1544]
-      }] @@@ Catenate[Table[
-        {consistentQ,
-         system[[1]],
-         system[[2]],
-         system[[Switch[{eventSelectionFunction, method},
-           {"GlobalSpacelike", "LowLevel"}, 3,
-           {"GlobalSpacelike", "Symbolic"}, 4,
-           {None, _}, 5]]],
-         method,
-         eventSelectionFunction},
-        {eventSelectionFunction, $eventSelectionFunctions},
-        {method, methods[eventSelectionFunction]},
-        {system, $systems}]]
-    }
+        ]
+      ] &, $systemsWithOptions];
+
+      {
+        VerificationTest[
+          consistentQ[WolframModel[#Rule,
+                                   #Init,
+                                   #StepLimit,
+                                   "VertexNamingFunction" -> #VertexNamingFunction,
+                                   "IncludePartialGenerations" -> #IncludePartialGenerations,
+                                   "EventSelectionFunction" -> #EventSelectionFunction,
+                                   Method -> #Method,
+                                   TimeConstraint -> #TimeConstraint]]
+        ]
+      } & /@ $systemsWithSteps
+    )
   |>
 |>
