@@ -67,13 +67,13 @@
                               {"StepLimiter", "Method"},
                               {"Method", "TimeConstraint"}};
 
-      $featureValueCombinations = Catenate[Function[{featuresToTest}, Module[{
+      $featureValueCombinations = Union[Catenate[Function[{featuresToTest}, Module[{
           defaultValueFeatures, enumeratedValueFeatures, featureValueLists},
         defaultValueFeatures = #[[{1}]] & /@ $features;
         enumeratedValueFeatures = Association[Thread[featuresToTest -> $features /@ featuresToTest]];
         featureValueLists = Join[defaultValueFeatures, enumeratedValueFeatures];
         Association[Thread[Keys[featureValueLists] -> #]] & /@ Tuples[Values[featureValueLists]]
-      ]] /@ $featureCombinations];
+      ]] /@ $featureCombinations]];
 
       $systemsWithOptions =
         Join[<|"Rule" -> #[[1, 1]], "Init" -> #[[1, 2]]|>, #[[2]]] & /@ Tuples[{$systems, $featureValueCombinations}];
@@ -94,6 +94,7 @@
                                         "VertexNamingFunction" -> #VertexNamingFunction,
                                         "IncludePartialGenerations" -> #IncludePartialGenerations,
                                         "EventSelectionFunction" -> #EventSelectionFunction,
+                                        "EventOrderingFunction" -> #EventOrderingFunction,
                                         Method -> #Method,
                                         TimeConstraint -> $singleSystemTimeConstraint];
           stepLimitValue = Switch[#StepLimiter,
@@ -113,18 +114,48 @@
         ]
       ] &, $systemsWithOptions];
 
+      $systemsWithNoTimeConstraint = Select[#TimeConstraint == Infinity &][$systemsWithSteps];
+      $systemPairsWithDifferentMethods =
+        Values[Select[Length[#] >= 2 &][GroupBy[$systemsWithNoTimeConstraint, KeyDrop[#, {"StepLimit", "Method"}] &]]];
+      $methodComparisonSystems =
+        Join[KeyDrop[#[[1]], {"Method", "StepLimit"}], <|"StepLimit" -> Merge[#[[All, Key["StepLimit"]]], Min]|>] & /@
+          $systemPairsWithDifferentMethods;
+
       {
         VerificationTest[
+          SeedRandom[#Seed];
           consistentQ[WolframModel[#Rule,
                                    #Init,
                                    #StepLimit,
                                    "VertexNamingFunction" -> #VertexNamingFunction,
                                    "IncludePartialGenerations" -> #IncludePartialGenerations,
                                    "EventSelectionFunction" -> #EventSelectionFunction,
+                                   "EventOrderingFunction" -> #EventOrderingFunction,
                                    Method -> #Method,
                                    TimeConstraint -> #TimeConstraint]]
-        ]
-      } & /@ $systemsWithSteps
+        ] & /@ $systemsWithSteps,
+
+        VerificationTest[
+          SeedRandom[#Seed];
+          WolframModel[#Rule,
+                       #Init,
+                       #StepLimit,
+                       "VertexNamingFunction" -> #VertexNamingFunction,
+                       "IncludePartialGenerations" -> #IncludePartialGenerations,
+                       "EventSelectionFunction" -> #EventSelectionFunction,
+                       "EventOrderingFunction" -> #EventOrderingFunction,
+                       Method -> "Symbolic"],
+          SeedRandom[#Seed];
+          WolframModel[#Rule,
+                       #Init,
+                       #StepLimit,
+                       "VertexNamingFunction" -> #VertexNamingFunction,
+                       "IncludePartialGenerations" -> #IncludePartialGenerations,
+                       "EventSelectionFunction" -> #EventSelectionFunction,
+                       "EventOrderingFunction" -> #EventOrderingFunction,
+                       Method -> "LowLevel"]
+        ] & /@ $methodComparisonSystems
+      }
     )
   |>
 |>

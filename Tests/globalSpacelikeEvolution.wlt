@@ -9,13 +9,6 @@
       v1 = v2 = v3 = v4 = v5 = 1;
     ),
     "tests" -> {
-      (* Fixed number of events *)
-
-      VerificationTest[
-        WolframModel[#1, #2, <|"MaxEvents" -> #3|>, Method -> "Symbolic"],
-        WolframModel[#1, #2, <|"MaxEvents" -> #3|>, Method -> "LowLevel"]
-      ] & @@@ $testSystems,
-
       (* Fixed number of events same seed consistentcy *)
 
       VerificationTest[
@@ -29,13 +22,6 @@
         (SeedRandom[1655]; WolframModel[#1, #2, <|"MaxEvents" -> #5|>, "EventOrderingFunction" -> "Random"]) =!=
           (SeedRandom[1656]; WolframModel[#1, #2, <|"MaxEvents" -> #5|>, "EventOrderingFunction" -> "Random"])
       ] & @@@ Select[$testSystems, #[[7]] =!= "sequential" &],
-
-      (* Fixed number of generations *)
-
-      VerificationTest[
-        WolframModel[#1, #2, #4, Method -> "Symbolic"],
-        WolframModel[#1, #2, #4, Method -> "LowLevel"]
-      ] & @@@ $testSystems,
 
       (* Fixed number of generations same seed consistentcy *)
 
