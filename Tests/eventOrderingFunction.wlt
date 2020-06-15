@@ -1,5 +1,9 @@
 <|
   "eventOrderingFunction" -> <|
+    "init" -> (
+      Attributes[Global`testUnevaluated] = {HoldAll};
+      Global`testUnevaluated[args___] := SetReplace`PackageScope`testUnevaluated[VerificationTest, args];
+    ),
     "tests" -> {
       testUnevaluated[
         WolframModel[{1 -> 2, 1 -> 3}, {1}, "EventOrderingFunction" -> "Random", Method -> #1],
