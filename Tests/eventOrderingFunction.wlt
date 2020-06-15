@@ -1,6 +1,11 @@
 <|
   "eventOrderingFunction" -> <|
     "tests" -> {
+      testUnevaluated[
+        WolframModel[{1 -> 2, 1 -> 3}, {1}, "EventOrderingFunction" -> "Random", Method -> #1],
+        #2
+      ] & @@@ {{Automatic, WolframModel::symbNotImplemented}, {"Symbolic", WolframModel::symbOrdering}},
+
       VerificationTest[
         SetReplace[{{1}, {2}, {3}, {4}, {5}}, {{{2}, {3}, {4}} -> {{X}}, {{3}} -> {{X}}}],
         {{1}, {2}, {4}, {5}, {X}}
