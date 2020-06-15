@@ -160,7 +160,50 @@
                 "EventOrderingFunction" -> "OldestEdge"][[-1]],
               {k, 100}]]],
         2
-      ]
+      ],
+
+      With[{rule = {{0, 1}, {0, 2}, {0, 3}} -> {{4, 5}, {5, 4}, {4, 6}, {6, 4}, {5, 6}, {6, 5}, {4, 1}, {5, 2}, {6, 3}},
+            init = {{0, 0}, {0, 0}, {0, 0}},
+            maxEvents = 80,
+            maxGenerations = 4}, {
+        (* Fixed number of events same seed consistentcy *)
+        VerificationTest[
+          SeedRandom[1655]; WolframModel[rule, init, <|"MaxEvents" -> maxEvents|>, "EventOrderingFunction" -> "Random"],
+          SeedRandom[1655]; WolframModel[rule, init, <|"MaxEvents" -> maxEvents|>, "EventOrderingFunction" -> "Random"]
+        ],
+
+        (* Fixed number of events different seeds difference *)
+        VerificationTest[
+          (SeedRandom[1655];
+           WolframModel[rule, init, <|"MaxEvents" -> maxEvents|>, "EventOrderingFunction" -> "Random"]) =!=
+          (SeedRandom[1656];
+           WolframModel[rule, init, <|"MaxEvents" -> maxEvents|>, "EventOrderingFunction" -> "Random"])
+        ],
+
+        (* Fixed number of generations same seed consistentcy *)
+        VerificationTest[
+          SeedRandom[1655]; WolframModel[rule, init, maxGenerations, "EventOrderingFunction" -> "Random"],
+          SeedRandom[1655]; WolframModel[rule, init, maxGenerations, "EventOrderingFunction" -> "Random"]
+        ],
+
+        (* Correct number of generations is obtained *)
+        VerificationTest[
+          SeedRandom[1655]; WolframModel[rule,
+                                         init,
+                                         maxGenerations,
+                                         {"TotalGenerationsCount", "MaxCompleteGeneration"},
+                                         "EventOrderingFunction" -> "Random"],
+          {maxGenerations, maxGenerations}
+        ],
+
+        (* Fixed number of generations different seeds difference *)
+        (* Even though final sets might be the same for some of these systems, different evaluation order will make *)
+        (* evolution objects different *)
+        VerificationTest[
+          (SeedRandom[1655]; WolframModel[rule, init, maxGenerations, "EventOrderingFunction" -> "Random"]) =!=
+          (SeedRandom[1656]; WolframModel[rule, init, maxGenerations, "EventOrderingFunction" -> "Random"])
+        ]
+      }]
     }
   |>
 |>
