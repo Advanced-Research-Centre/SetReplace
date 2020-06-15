@@ -364,7 +364,7 @@ wolframModelStepsSpecQ[stepsSpec_ ? stepCountQ] := True
 
 wolframModelStepsSpecQ[stepsSpec_Association] /;
 	SubsetQ[Values[$stepSpecKeys], Keys[stepsSpec]] &&
-	AllTrue[First[fromStepsSpec[{}, stepsSpec, Infinity]], stepCountQ] := True
+	AllTrue[First[fromStepsSpec[{}, stepsSpec, Infinity, "GlobalSpacelike"]], stepCountQ] := True
 
 
 wolframModelStepsSpecQ[Automatic] := True
