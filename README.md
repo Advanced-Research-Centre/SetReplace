@@ -1417,7 +1417,7 @@ In[] := WolframModel[{{{1, 2}, {1, 3}, {1, 4}} -> {{5, 6}, {6, 7}, {7, 5}, {5,
 
 **`EventSelectionFunction`** allows one to evaluate local multiway systems. Currently, two values are supported, `"GlobalSpacelike"` and `None`.
 
-`"GlobalSpacelike"` is the default, and is the single-way evolution. "Spacelike" refers to relationships between edges, and "global" means each pair of edges in the evolution is either spacelike or timelike. There are no branchlike pairs of edges. Equivalently, as soon as an edge is used in an event, it is "disabled", and cannot be used anymore.
+`"GlobalSpacelike"` is the default, and is the single-way evolution. "Spacelike" refers to relationships between edges, and "global" means each edge is only used once in an event. As a consequence, there are no branchlike pairs of edges.
 
 On the other hand, `None` (aka match-all) event selection function matches everything. It does not disable edges after they were used, so they can be reused many times (each unique match is only used once though).
 
@@ -1429,7 +1429,7 @@ In[] := WolframModel[{{1, 2}, {2, 3}} -> {{1, 3}},
 Out[] = {{1, 2}, {2, 3}, {2, 4}, {1, 3}}
 ```
 
-In this example we used `"GlobalSpacelike"` selection function, and the evolution terminated after a single event, because the edge `{1, 2}` was used, and it could not be reused to be matched with `{2, 4}`. However, let's look at what `"EventSelectionFunction" -> None` will do:
+In this example we used the default `"GlobalSpacelike"` selection function, and the evolution terminated after a single event, because the edge `{1, 2}` was used, and it could not be reused to be matched with `{2, 4}`. However, let's look at what `"EventSelectionFunction" -> None` will do:
 
 ```wl
 In[] := WolframModel[{{1, 2}, {2, 3}} -> {{1, 3}},
@@ -1460,7 +1460,7 @@ Out[] = {{1, 2}, {2, 3}, {2, 4}, {1, 2, 3}, {1, 2, 4}, {1, 2, 3, 4}, {1, 2, 4,
    3}}
 ```
 
-Similarly, it matches timelike edges, like `{1, 2}` and `{1, 2, 3}` below:
+Similarly, it matches timelike edges `{1, 2}` and `{1, 2, 3}` below:
 
 ```wl
 In[] := WolframModel[{{{1, 2}, {2, 3}} -> {{1, 2, 3}},
