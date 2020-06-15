@@ -1800,5 +1800,72 @@
     "options" -> {
       "Parallel" -> False
     }
+  |>,
+  "evolutionObjectMigration" -> <|
+    "init" -> (
+      Attributes[Global`testUnevaluated] = {HoldAll};
+      Global`testUnevaluated[args___] := SetReplace`PackageScope`testUnevaluated[VerificationTest, args];
+    ),
+    "tests" -> {
+      (* v1 -> v2 *)
+      VerificationTest[
+        WolframModelEvolutionObject[<|"CreatorEvents" -> {0, 0, 0, 0, 1, 2, 3},
+                                      "DestroyerEvents" -> {1, 1, 2, 2, 3, 3, Infinity},
+                                      "Generations" -> {0, 0, 0, 0, 1, 1, 2},
+                                      "AtomLists" -> {{1, 2}, {2, 3}, {3, 4}, {4, 5}, {1, 3}, {3, 5}, {1, 5}},
+                                      "Rules" -> {{1, 2}, {2, 3}} -> {{1, 3}},
+                                      "MaxCompleteGeneration" -> 2,
+                                      "TerminationReason" -> "FixedPoint",
+                                      "EventRuleIDs" -> {1, 1, 1}|>],
+        WolframModelEvolutionObject[<|"Version" -> 2,
+                                      "Rules" -> {{1, 2}, {2, 3}} -> {{1, 3}},
+                                      "MaxCompleteGeneration" -> 2,
+                                      "TerminationReason" -> "FixedPoint",
+                                      "AtomLists" -> {{1, 2}, {2, 3}, {3, 4}, {4, 5}, {1, 3}, {3, 5}, {1, 5}},
+                                      "EventRuleIDs" -> {0, 1, 1, 1},
+                                      "EventInputs" -> {{}, {1, 2}, {3, 4}, {5, 6}},
+                                      "EventOutputs" -> {{1, 2, 3, 4}, {5}, {6}, {7}},
+                                      "EventGenerations" -> {0, 1, 1, 2}|>]
+      ],
+
+      (* reorder data in v1 *)
+      VerificationTest[
+        WolframModelEvolutionObject[<|"Rules" -> {{1, 2}, {2, 3}} -> {{1, 3}},
+                                      "CreatorEvents" -> {0, 0, 0, 0, 1, 2, 3},
+                                      "DestroyerEvents" -> {1, 1, 2, 2, 3, 3, Infinity},
+                                      "Generations" -> {0, 0, 0, 0, 1, 1, 2},
+                                      "AtomLists" -> {{1, 2}, {2, 3}, {3, 4}, {4, 5}, {1, 3}, {3, 5}, {1, 5}},
+                                      "MaxCompleteGeneration" -> 2,
+                                      "TerminationReason" -> "FixedPoint",
+                                      "EventRuleIDs" -> {1, 1, 1}|>],
+        WolframModelEvolutionObject[<|"Version" -> 2,
+                                      "Rules" -> {{1, 2}, {2, 3}} -> {{1, 3}},
+                                      "MaxCompleteGeneration" -> 2,
+                                      "TerminationReason" -> "FixedPoint",
+                                      "AtomLists" -> {{1, 2}, {2, 3}, {3, 4}, {4, 5}, {1, 3}, {3, 5}, {1, 5}},
+                                      "EventRuleIDs" -> {0, 1, 1, 1},
+                                      "EventInputs" -> {{}, {1, 2}, {3, 4}, {5, 6}},
+                                      "EventOutputs" -> {{1, 2, 3, 4}, {5}, {6}, {7}},
+                                      "EventGenerations" -> {0, 1, 1, 2}|>]
+      ],
+
+      (* missing keys *)
+      testUnevaluated[
+        WolframModelEvolutionObject[<|"Rules" -> {{1, 2}, {2, 3}} -> {{1, 3}},
+                                      "CreatorEvents" -> {0, 0, 0, 0, 1, 2, 3},
+                                      "DestroyerEvents" -> {1, 1, 2, 2, 3, 3, DirectedInfinity[1]},
+                                      "Generations" -> {0, 0, 0, 0, 1, 1, 2},
+                                      "AtomLists" -> {{1, 2}, {2, 3}, {3, 4}, {4, 5}, {1, 3}, {3, 5}, {1, 5}},
+                                      "MaxCompleteGeneration" -> 2,
+                                      "EventRuleIDs" -> {1, 1, 1}|>],
+        {WolframModelEvolutionObject::corrupt}
+      ],
+
+      (* future version *)
+      testUnevaluated[
+        WolframModelEvolutionObject[<|"Version" -> 100|>],
+        {WolframModelEvolutionObject::future}
+      ]
+    }
   |>
 |>
